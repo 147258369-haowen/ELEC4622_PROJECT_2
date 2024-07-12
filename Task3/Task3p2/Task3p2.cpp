@@ -19,6 +19,8 @@ int main(int argc, char* argv[]) {
     my_image_comp* temp_comps_out = nullptr;
     my_image_comp* overlaid = nullptr;
     my_image_comp* nextinput = nullptr;
+    my_image_comp** lapalacin = nullptr;
+    my_image_comp* temp_image_2 = nullptr;
     ImageParam imageParam;
     float sigma = 0;
     float** lapkernel = allocateMatrix(3);
@@ -29,21 +31,14 @@ int main(int argc, char* argv[]) {
         switch (state) {
         case CHECK_INPUT:
             CheckInput(argc, argv, &sigma, &filterChoose, &imageParam);
-            sinc = new Filter(imageParam.H, imageParam.D);
-            sinc->SincKernelGenerate(sinc->sinc_buffer);
-            imageParam.sincWidth = ((sinc->length) * 2 + 1);
-            printf("[");
-            for (int i = 0; i < imageParam.sincWidth; i++) {
-                printf("%f,", sinc->sinc_buffer[i]);
-            }
-            printf("]\n");
+
             state = LOAD_PICTURE;
             break;
         case LOAD_PICTURE:
             //printf("%f\r\n", FilterInit(matrix, HIGHT, WIDTH));//归一化
             imageParam.GaussianDimension = GaussianWindowDimensionChoose(sigma);
             LoadImage(&in, &input_comps, &output_comps, &line, &imageParam, &filterChoose, argv);
-            state = LAPLACIAM_PYRAMID;
+            state = INVERT_LAPLACIAN;
             break;
         case GAUSSIAN_FILTER:
             printf("Gaussan dimension: %d\r\n", imageParam.GaussianDimension);
@@ -63,6 +58,26 @@ int main(int argc, char* argv[]) {
             state = (imageParam.gradientFlag) ? IMAGE_GRADIENT : OUTPUT_PICTURE;
             delete[] temp_comps;
             break;
+        case INVERT_LAPLACIAN: {
+            int D = Image_location(&input_comps,imageParam.height,imageParam.width,&imageParam);
+            imageParam.D = D;
+            lapalacin = allocate_laplacian(D, imageParam.origion_image_height, imageParam.width);
+            Decompoment(input_comps, lapalacin,D);
+            my_image_comp* input = lapalacin[D];
+            my_image_comp* temp_image_1 = new  my_image_comp[imageParam.num_comp];
+            for (int i = D; i >=1; i--) {         
+                Image_upsample(&input, &temp_image_1, &imageParam);
+                temp_image_2 = ImageRestore(temp_image_1, lapalacin[i - 1], &imageParam);
+                printf("lapalacin[D - 1].height:%d\r\n", lapalacin[i - 1][0].height);
+                input = temp_image_2;
+                
+            }
+ /*           imageParam.initheight = lapalacin[D][0].height;
+            imageParam.initwidth = lapalacin[D][0].width;
+            imageParam.D = D;*/
+            state = OUTPUT_PICTURE;
+
+        }break;
         case LAPLACIAM_PYRAMID: {
             my_image_comp* temp_diff = new  my_image_comp[imageParam.num_comp];
             my_image_comp* temp_diffback = new  my_image_comp[imageParam.num_comp];
@@ -85,7 +100,7 @@ int main(int argc, char* argv[]) {
                 imageParam.initheight += (tempheight / 2);
                 tempheight = (tempheight / 2);
             }
-            printf("initheight__:%d\r\n", imageParam.initheight);
+            printf("initheight:%d\r\n", imageParam.initheight);
             Image_comps_init(&overlaid, &imageParam, imageParam.initheight, imageParam.width, (imageParam.sincWidth - 1) / 2);
             Image_LPF(&input_comps, &temp_comps_inital, &sinc, &imageParam);//lpf 10
             Image_DownSample(&temp_comps_inital, &temp_comps, &imageParam);// 5
@@ -95,7 +110,7 @@ int main(int argc, char* argv[]) {
             //Image_DownSample(&temp_comps, &output_comps, &imageParam);//5
 
             nextinput = temp_comps;
-           
+
             for (int i = 0; i < imageParam.D - 1; i++) {
                 Image_LPF(&nextinput, &temp_comps_4, &sinc, &imageParam);//10
                 Image_DownSample(&temp_comps_4, &output_comps, &imageParam);//5
@@ -103,13 +118,13 @@ int main(int argc, char* argv[]) {
                 Laplacian_difference(&temp_comps_4, &temp_diffback, &imageParam);//10
                 Image_copy(&temp_diffback, &overlaid, &imageParam);
                 nextinput = output_comps;
-               /* Image_copy(&output_comps, &overlaid, &imageParam);*/
+                /* Image_copy(&output_comps, &overlaid, &imageParam);*/
             }
             Image_copy(&output_comps, &overlaid, &imageParam);
-            
+
             state = OUTPUT_PICTURE;
         }
-            break;
+                              break;
         case SINC_FILTER:
             temp_comps = new  my_image_comp[imageParam.num_comp];
             overlaid = new  my_image_comp[imageParam.num_comp];
@@ -216,9 +231,10 @@ int main(int argc, char* argv[]) {
 
 #else
             delete line;
-            line = new io_byte[imageParam.initwidth * 3];//* num_comps
-            OutputImage(&out, input_comps, &overlaid, &line, &imageParam, argv);
+            line = new io_byte[imageParam.width * 3];//* num_comps
+            OutputImage(&out, input_comps, &temp_image_2, &line, &imageParam, argv);
             bmp_in__close(&in);
+            
             delete[] line;
             delete[] input_comps;
             delete[] output_comps;

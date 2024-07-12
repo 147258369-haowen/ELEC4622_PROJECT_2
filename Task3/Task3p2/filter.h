@@ -39,7 +39,7 @@ public:
             this->t[i] = -(this->length) + i;
         }
         for (int i = 0; i < (this->length * 2 + 1); i++) {
-            sinc_buffer[i] = sinc(this->t[i] / (2.5));/// 
+            sinc_buffer[i] = sinc(this->t[i] / (3.5));/// 
         }
         hannwindow(this->hann);
         for (int i = 0; i < (this->length * 2 + 1); i++) {
