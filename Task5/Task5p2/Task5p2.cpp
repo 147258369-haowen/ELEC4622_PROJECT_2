@@ -4,14 +4,16 @@
 #include "io_bmp.h"
 #include "filter.h"
 #include "image_comps.h"
-
+#include <math.h>
 extern float laplacianKernel[3][3];
 int main(int argc, char* argv[]) {
     STATE state = CHECK_INPUT;
     int filterChoose = 0;
     bmp_in in;
+    bmp_in in2;
     bmp_out out;
     my_image_comp* input_comps = nullptr;
+    my_image_comp* input_comps2 = nullptr;
     my_image_comp* output_comps = nullptr;
     io_byte* line = nullptr;
     float** matrix = nullptr;
@@ -31,15 +33,29 @@ int main(int argc, char* argv[]) {
         switch (state) {
         case CHECK_INPUT:
             CheckInput(argc, argv, &sigma, &filterChoose, &imageParam);
-
+            sinc = new Filter(imageParam.H, imageParam.D);
+            sinc->SincKernelGenerate(sinc->sinc_buffer);
+            imageParam.sincWidth = ((sinc->length) * 2 + 1);
+            printf("[");
+            for (int i = 0; i < imageParam.sincWidth; i++) {
+                printf("%f,", sinc->sinc_buffer[i]);
+            }
+            printf("]\n");
             state = LOAD_PICTURE;
             break;
         case LOAD_PICTURE:
             //printf("%f\r\n", FilterInit(matrix, HIGHT, WIDTH));//归一化
             imageParam.GaussianDimension = GaussianWindowDimensionChoose(sigma);
-            LoadImage(&in, &input_comps, &output_comps, &line, &imageParam, &filterChoose, argv);
-            state = INVERT_LAPLACIAN;
+            LoadImage(&in,&in2, &input_comps, &input_comps2 ,&output_comps, &line, &imageParam, &filterChoose, argv);
+            state = STICH_IMAGE;
             break;
+        case STICH_IMAGE: {
+            Image_comps_init(&output_comps, &imageParam, imageParam.height, imageParam.width,0);
+            for (int n = 0; n < imageParam.num_comp; n++) {
+                output_comps[n].ImageStich(input_comps + n, input_comps2 + n,&imageParam);           
+            }
+            state = OUTPUT_PICTURE;
+        }break;
         case GAUSSIAN_FILTER:
             printf("Gaussan dimension: %d\r\n", imageParam.GaussianDimension);
             matrix = allocateMatrix(imageParam.GaussianDimension);
@@ -59,21 +75,22 @@ int main(int argc, char* argv[]) {
             delete[] temp_comps;
             break;
         case INVERT_LAPLACIAN: {
-            int D = Image_location(&input_comps,imageParam.height,imageParam.width,&imageParam);
+            int D = Image_location(&overlaid, imageParam.initheight, imageParam.width*pow(imageParam.D,3), &imageParam);
             imageParam.D = D;
-            lapalacin = allocate_laplacian(D, imageParam.origion_image_height, imageParam.width);
-            Decompoment(input_comps, lapalacin,D);
+            lapalacin = allocate_laplacian(D, imageParam.origion_image_height, imageParam.width * pow(D, 3));
+            Decompoment(overlaid, lapalacin, D);
             my_image_comp* input = lapalacin[D];
             my_image_comp* temp_image_1 = new  my_image_comp[imageParam.num_comp];
-            for (int i = D; i >=1; i--) {         
+            for (int i = D; i >= 1; i--) {
                 Image_upsample(&input, &temp_image_1, &imageParam);
                 temp_image_2 = ImageRestore(temp_image_1, lapalacin[i - 1], &imageParam);
                 printf("lapalacin[D - 1].height:%d\r\n", lapalacin[i - 1][0].height);
                 input = temp_image_2;
             }
- /*           imageParam.initheight = lapalacin[D][0].height;
-            imageParam.initwidth = lapalacin[D][0].width;
-            imageParam.D = D;*/
+            imageParam.width = imageParam.width * pow(imageParam.D, 3);
+            /*           imageParam.initheight = lapalacin[D][0].height;
+                       imageParam.initwidth = lapalacin[D][0].width;
+                       imageParam.D = D;*/
             state = OUTPUT_PICTURE;
 
         }break;
@@ -121,10 +138,10 @@ int main(int argc, char* argv[]) {
             }
             Image_copy(&output_comps, &overlaid, &imageParam);
 
-            state = OUTPUT_PICTURE;
+            state = INVERT_LAPLACIAN;
         }
                               break;
-        case SINC_FILTER:
+        case GAUSSIAN_PYRAMID:
             temp_comps = new  my_image_comp[imageParam.num_comp];
             overlaid = new  my_image_comp[imageParam.num_comp];
             for (int n = 0; n < imageParam.num_comp; n++)
@@ -231,9 +248,9 @@ int main(int argc, char* argv[]) {
 #else
             delete line;
             line = new io_byte[imageParam.width * 3];//* num_comps
-            OutputImage(&out, input_comps, &temp_image_2, &line, &imageParam, argv);
+            OutputImage(&out, input_comps, &output_comps, &line, &imageParam, argv);
             bmp_in__close(&in);
-            
+
             delete[] line;
             delete[] input_comps;
             delete[] output_comps;

@@ -66,9 +66,9 @@ int main(int argc, char* argv[]) {
             delete[] temp_comps;
             break;
         case INVERT_LAPLACIAN: {
-            int D = Image_location(&overlaid, imageParam.initheight, imageParam.width*pow(imageParam.D,3), &imageParam);
+            int D = Image_location(&overlaid, overlaid[0].height, overlaid[0].width, &imageParam);
             imageParam.D = D;
-            lapalacin = allocate_laplacian(D, imageParam.origion_image_height, imageParam.width * pow(D, 3));
+            lapalacin = allocate_laplacian(D, imageParam.origion_image_height, overlaid[0].width);
             Decompoment(overlaid, lapalacin, D);
             my_image_comp* input = lapalacin[D];
             my_image_comp* temp_image_1 = new  my_image_comp[imageParam.num_comp];
@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
                 printf("lapalacin[D - 1].height:%d\r\n", lapalacin[i - 1][0].height);
                 input = temp_image_2;
             }
-            imageParam.width = imageParam.width * pow(imageParam.D, 3);
+            imageParam.width = overlaid[0].width;
             /*           imageParam.initheight = lapalacin[D][0].height;
                        imageParam.initwidth = lapalacin[D][0].width;
                        imageParam.D = D;*/
@@ -100,6 +100,10 @@ int main(int argc, char* argv[]) {
 
             my_image_comp* temp_comps_4 = new  my_image_comp[imageParam.num_comp];
             Image_comps_init(&temp_comps_4, &imageParam, imageParam.height, imageParam.width, (imageParam.sincWidth - 1) / 2);
+
+            my_image_comp* temp_comps_5 = new  my_image_comp[imageParam.num_comp];
+            Image_comps_init(&temp_comps_5, &imageParam, imageParam.height, imageParam.width, (imageParam.sincWidth - 1) / 2);
+
             overlaid = new  my_image_comp[imageParam.num_comp];
 
             tempheight = imageParam.initheight;//extension coloum
@@ -112,7 +116,7 @@ int main(int argc, char* argv[]) {
             Image_LPF(&input_comps, &temp_comps_inital, &sinc, &imageParam);//lpf 10
             Image_DownSample(&temp_comps_inital, &temp_comps, &imageParam);// 5
             Image_upsample(&temp_comps, &temp_comps_3, &imageParam);//10
-            Laplacian_difference(&temp_comps_inital, &temp_comps_3, &imageParam);
+            Laplacian_difference(&input_comps, &temp_comps_3, &imageParam);
             Image_copy(&temp_comps_3, &overlaid, &imageParam);
             //Image_DownSample(&temp_comps, &output_comps, &imageParam);//5
 
@@ -120,9 +124,11 @@ int main(int argc, char* argv[]) {
 
             for (int i = 0; i < imageParam.D - 1; i++) {
                 Image_LPF(&nextinput, &temp_comps_4, &sinc, &imageParam);//10
+                Image_comps_init(&temp_comps_5, &imageParam, nextinput[0].height, nextinput[0].width, (imageParam.sincWidth - 1) / 2);
+                Image_copy_no_offset(&nextinput, &temp_comps_5, &imageParam);
                 Image_DownSample(&temp_comps_4, &output_comps, &imageParam);//5
                 Image_upsample(&output_comps, &temp_diffback, &imageParam);//10
-                Laplacian_difference(&temp_comps_4, &temp_diffback, &imageParam);//10
+                Laplacian_difference(&temp_comps_5, &temp_diffback, &imageParam);//10
                 Image_copy(&temp_diffback, &overlaid, &imageParam);
                 nextinput = output_comps;
                 /* Image_copy(&output_comps, &overlaid, &imageParam);*/

@@ -32,6 +32,7 @@ typedef enum {
     GAUSSIAN_PYRAMID,
     LAPLACIAM_PYRAMID,
     INVERT_LAPLACIAN,
+    STICH_IMAGE,
 }STATE;
 typedef struct {
     int width;
@@ -79,6 +80,33 @@ struct my_image_comp {
         handle = new float[stride * (height + 2 * border)];
         buf = handle + (border * stride) + border;//the real picture start point
     }
+    void ImageStich(my_image_comp* left, my_image_comp* right, ImageParam* imagP) {
+            //left stich
+            for (int r = 0; r < left->height; r++) {
+                for (int c = 0; c < (left->width/2); c++)
+                {
+                    //printf("out width:%d", out[i][n].width);
+                    //while(1);
+                    float* input = left->buf + (r) * left->stride + (c);
+                    float* output = this->buf + r * this->stride + c;
+                    *output = *input;
+                }
+            }
+            //right stich
+            for (int r = 0; r < left->height; r++) {
+                for (int c = (right->width / 2); c < right->width; c++)
+                {
+                    //printf("out width:%d", out[i][n].width);
+                    //while(1);
+                    float* input = right->buf + (r)*right->stride + (c);
+                    float* output = this->buf + r * this->stride + c;
+                    *output = *input;
+                }
+            }
+
+    
+    
+    }
     void perform_boundary_extension();
     void apply_filter_modified_simo(my_image_comp* in, my_image_comp* out, float** inputfilter, int width);
     void vector_filter(my_image_comp* in, int dimension);
@@ -103,7 +131,7 @@ int LoadGaussianValue(float** matrix, float sigma, int dimension);
 float** allocateMatrix(int dimension);
 void FreeMatrix(float** matrix, int width);
 int VarianceLoopCheck(float sigma, ImageParam* imageParam);
-void LoadImage(bmp_in* in, my_image_comp** input_comps, my_image_comp** output_comps, io_byte** line,
+void LoadImage(bmp_in* in, bmp_in* in2, my_image_comp** input_comps, my_image_comp** input_comps2, my_image_comp** output_comps, io_byte** line,
     ImageParam* imageParam, int* filterChoose, char** argv);
 void MovingAverageSetValue(float** matrix, int dimension);
 int GaussianWindowDimensionChoose(float sigma);
@@ -119,5 +147,4 @@ int Image_location(my_image_comp** temp_comps, int Height, int width, ImageParam
 void Decompoment(my_image_comp* in, my_image_comp** out, int D);
 my_image_comp** allocate_laplacian(int D, int height, int width);
 my_image_comp* ImageRestore(my_image_comp* image_upsample, my_image_comp* image_laplacian, ImageParam* imageParam);
-void Image_copy_no_offset(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam);
 #endif

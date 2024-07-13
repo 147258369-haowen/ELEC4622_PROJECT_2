@@ -501,7 +501,7 @@ int OutputImage(bmp_out* out, my_image_comp* input_comps, my_image_comp** output
     int err_code = 0;
     try {
         printf("enter output\n");
-        int width = 1024, height = 1024;
+        int width = (*output_comps)[0].width, height = (*output_comps)[0].height;
         int n, num_comps = imageParam->num_comp;
         //*output_comps = new my_image_comp[num_comps];
         //for (n = 0; n < num_comps; n++)
@@ -1056,10 +1056,9 @@ void Laplacian_difference(my_image_comp** input_comps, my_image_comp** output_co
             {
                 float* a = (*input_comps)[n].buf + (r) * (*input_comps)[n].stride + (c);
                 float* output = (*output_comps)[n].buf + r * (*output_comps)[n].stride + c;
-                int difference_value = ((*a - *output) + 128);
+                int difference_value = ((*a - *output) + 128);//
                 CLAMP_TO_BYTE(difference_value);
                 *output = difference_value;
-
             }
         }
     }
@@ -1138,15 +1137,11 @@ my_image_comp* ImageRestore(my_image_comp* image_upsample, my_image_comp* image_
         for (int r = 0; r < image_laplacian[n].height; r++) {
             for (int c = 0; c < image_laplacian[n].width; c++)
             {
-                //printf("out width:%d", out[i][n].width);
-                //while(1);
                 float* a = image_upsample[n].buf + (r)*image_upsample[n].stride + (c);
                 float* b = image_laplacian[n].buf + r * image_laplacian[n].stride + c;
                 float* add = output[n].buf + r * output[n].stride + c;
                 *add = ((*b - 128) + *a);
-                // if (count_flag == imageParam->D) { 
                 CLAMP_TO_BYTE(*add);
-                // }
             }
 
         }
@@ -1156,5 +1151,20 @@ my_image_comp* ImageRestore(my_image_comp* image_upsample, my_image_comp* image_
 
     }
     return output;
+
+}
+void Image_copy_no_offset(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam) {
+    static int height_offset = 0;
+    for (int n = 0; n < 3; n++) {
+        for (int r = 0; r < (*input_comps)[n].height; r++) {
+            for (int c = 0; c < (*input_comps)[n].width; c++)
+            {
+                float* a = (*input_comps)[n].buf + (r) * (*input_comps)[n].stride + (c);
+                float* output = (*output_comps)[n].buf + (r) * (*output_comps)[n].stride + c;
+                *output = *a;
+            }
+        }
+    }
+
 
 }

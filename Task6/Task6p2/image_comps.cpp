@@ -415,10 +415,11 @@ float h3[9][9]{
 
 void CheckInput(int argc, char* argv[], float* sigma, int* filterChooseFlag, ImageParam* param) {
     param->gradientFlag = false;
-    int D, H;
+    int D, H, height;
     D = atoi(argv[3]);
     H = atoi(argv[4]);
-    if (argc < 5)
+    height = atoi(argv[5]);
+    if (argc < 7)
     {
         fprintf(stderr, "Usage: %s <in bmp file> <out bmp file> <sigma> (optional)<-w>\n", argv[0]);
         exit(-1);
@@ -431,16 +432,23 @@ void CheckInput(int argc, char* argv[], float* sigma, int* filterChooseFlag, Ima
         fprintf(stderr, "The H value is not correct\n");
         exit(-1);
     }
+    else if (height <= 0) {
+        fprintf(stderr, "The height value is not correct\n");
+        exit(-1);
+    }
     printf("H = %d\r\n", H);
     printf("D = %d\r\n", D);
     param->D = D;
     param->H = H;
+    param->origion_image_height = height;
 }
-void LoadImage(bmp_in* in, my_image_comp** input_comps, my_image_comp** output_comps, io_byte** line,
+void LoadImage(bmp_in* in, bmp_in* in2, my_image_comp** input_comps, my_image_comp** input_comps2, my_image_comp** output_comps, io_byte** line,
     ImageParam* imageParam, int* filterChoose, char** argv) {
     int err_code = 0;
     try {
         if ((err_code = bmp_in__open(in, argv[1])) != 0)
+            throw err_code;
+        if ((err_code = bmp_in__open(in2, argv[6])) != 0)
             throw err_code;
         int width = in->cols, height = in->rows;
         int n, num_comps = in->num_components;
@@ -453,10 +461,13 @@ void LoadImage(bmp_in* in, my_image_comp** input_comps, my_image_comp** output_c
         printf("width: %d\n", width);
         printf("num_comps: %d\n", num_comps);
         *input_comps = new my_image_comp[num_comps];
+        *input_comps2 = new my_image_comp[num_comps];
         *output_comps = new my_image_comp[num_comps];
 
         for (n = 0; n < num_comps; n++)
-            (*input_comps)[n].init(height, width, (imageParam->sincWidth - 1) / 2); // Leave a border of 4
+            (*input_comps)[n].init(height, width, (imageParam->sincWidth - 1) / 2); // 
+        for (n = 0; n < num_comps; n++)
+            (*input_comps2)[n].init(height, width, (imageParam->sincWidth - 1) / 2); // 
 
         printf("stride: %d\n", (*input_comps)->stride);
         int r; // Declare row index
@@ -469,6 +480,20 @@ void LoadImage(bmp_in* in, my_image_comp** input_comps, my_image_comp** output_c
             for (n = 0; n < num_comps; n++) {
                 io_byte* src = *line + n; // Points to first sample of component n
                 float* dst = (*input_comps)[n].buf + r * (*input_comps)[n].stride;
+                for (int c = 0; c < width; c++, src += num_comps)
+                    dst[c] = (float)*src; // The cast to type "float" is not
+                // strictly required here, since bytes can always be
+                // converted to floats without any loss of information.
+            }
+        }
+        for (r = height - 1; r >= 0; r--) {
+            // "r" holds the true row index we are reading, since the image is
+            // stored upside down in the BMP file.
+            if ((err_code = bmp_in__get_line(in2, *line)) != 0)
+                throw err_code;
+            for (n = 0; n < num_comps; n++) {
+                io_byte* src = *line + n; // Points to first sample of component n
+                float* dst = (*input_comps2)[n].buf + r * (*input_comps2)[n].stride;
                 for (int c = 0; c < width; c++, src += num_comps)
                     dst[c] = (float)*src; // The cast to type "float" is not
                 // strictly required here, since bytes can always be
@@ -495,7 +520,7 @@ int OutputImage(bmp_out* out, my_image_comp* input_comps, my_image_comp** output
     int err_code = 0;
     try {
         printf("enter output\n");
-        int width = imageParam->initwidth, height = imageParam->initheight;
+        int width = (*output_comps)[0].width, height = (*output_comps)[0].height;
         int n, num_comps = imageParam->num_comp;
         //*output_comps = new my_image_comp[num_comps];
         //for (n = 0; n < num_comps; n++)
@@ -946,9 +971,8 @@ void Image_DownSample(my_image_comp** input_comps, my_image_comp** output_comps,
     imageParam->height = (imageParam->height / 2);
     imageParam->width = (imageParam->width / 2);
 }
-
-void Image_copy(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam) {
-    static int height_offset = 0;
+int height_offset = 0;
+void Image_copy(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam,int clear) {
     for (int n = 0; n < 3; n++) {
         for (int r = 0; r < (*input_comps)[n].height; r++) {
             for (int c = 0; c < (*input_comps)[n].width; c++)
@@ -959,35 +983,20 @@ void Image_copy(my_image_comp** input_comps, my_image_comp** output_comps, Image
             }
         }
     }
-    printf("height_offset:%d", height_offset);
+    printf("height_offset:%d\r\n", height_offset);
 
     height_offset += (*input_comps)[0].height;
 
 }
-void Image_copy_no_offset(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam) {
-    static int height_offset = 0;
-    for (int n = 0; n < 3; n++) {
-        for (int r = 0; r < (*input_comps)[n].height; r++) {
-            for (int c = 0; c < (*input_comps)[n].width; c++)
-            {
-                float* a = (*input_comps)[n].buf + (r) * (*input_comps)[n].stride + (c);
-                float* output = (*output_comps)[n].buf + (r) * (*output_comps)[n].stride + c;
-                *output = *a;
-            }
-        }
-    }
-    
-
-}
-
 void Image_upsample(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam) {
-    int old_height = imageParam->height;
-    int old_width = imageParam->width;
+    int old_height = (*input_comps)[0].height;
+    printf("old height__:%d\r\n", old_height);
+    int old_width = (*input_comps)[0].width;
     int new_height = 2 * old_height;
     int new_width = 2 * old_width;
 
     for (int n = 0; n < imageParam->num_comp; n++) {
-        (*output_comps)[n].init(new_height, new_width, (imageParam->sincWidth - 1) / 2);
+        (*output_comps)[n].init(new_height, new_width, 64);
         (*output_comps)[n].perform_boundary_extension();
     }
 
@@ -1023,10 +1032,10 @@ void Image_upsample(my_image_comp** input_comps, my_image_comp** output_comps, I
         }
     }
 
- /*   imageParam->height = new_height;
-    imageParam->width = new_width;*/
-  /*  imageParam->initheight = new_height;
-    imageParam->initwidth = new_width;*/
+    /*   imageParam->height = new_height;
+       imageParam->width = new_width;*/
+       /*  imageParam->initheight = new_height;
+         imageParam->initwidth = new_width;*/
 }
 void Laplacian_difference(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam) {
     int old_height = imageParam->height;
@@ -1051,9 +1060,117 @@ void Laplacian_difference(my_image_comp** input_comps, my_image_comp** output_co
     imageParam->width = (imageParam->width);
 
 }
-void Image_comps_init(my_image_comp** temp_comps, ImageParam* imageParam,int height,int width, int extention) {
+void Image_comps_init(my_image_comp** temp_comps, ImageParam* imageParam, int height, int width, int extention) {
     for (int n = 0; n < imageParam->num_comp; n++)
         (*temp_comps)[n].init(height, width, extention); // Don't need a border for output
     for (int n = 0; n < imageParam->num_comp; n++)
         (*temp_comps)[n].perform_boundary_extension();
+}
+
+int Image_location(my_image_comp** temp_comps, int Height, int width, ImageParam* imageParam) {
+    int origion_image_height = imageParam->origion_image_height;
+    int tempheight = imageParam->origion_image_height;
+    int D = 0;
+    while (origion_image_height != Height) {
+        origion_image_height += tempheight / 2;
+        tempheight = (tempheight / 2);
+        D++;
+    }
+    printf("D:%d\r\n", D);
+    return D;
+
+}
+
+void Decompoment(my_image_comp* in, my_image_comp** out, int D) {
+    int offset = 0;
+    for (int i = 0; i < D + 1; ++i) {
+        for (int n = 0; n < 3; n++) {
+            for (int r = 0; r < out[i][n].height; r++) {
+                for (int c = 0; c < out[i][n].width; c++)
+                {
+                    //printf("out width:%d", out[i][n].width);
+                    //while(1);
+                    float* a = in[n].buf + (r + offset) * in[n].stride + (c);
+                    float* output = out[i][n].buf + r * out[i][n].stride + c;
+                    *output = *a;
+                }
+            }
+        }
+        offset += out[i][0].height;
+    }
+
+}
+my_image_comp** allocate_laplacian(int D, int height, int width) {//height 1024
+    my_image_comp** laplacian = new my_image_comp * [D + 1];
+    int tempheight = height;//extension coloum
+    int tempwidth = width;
+    printf("tempheight:%d\r\n", tempheight);
+    for (int i = 0; i < (D + 1); ++i) {
+        laplacian[i] = new my_image_comp[3];
+        for (int j = 0; j < 3; j++) {
+            laplacian[i][j].init(tempheight, tempwidth, 4);
+            laplacian[i][j].perform_boundary_extension();
+
+        }
+        tempheight = tempheight / 2;
+        tempwidth = tempwidth / 2;
+        printf("tempheight:%d\r\n", tempheight);
+    }
+
+    return laplacian;
+}
+void free_laplacian(my_image_comp** laplacian, int D) {
+    for (int i = 0; i <= D; ++i) {
+        delete[] laplacian[i]; // 释放每层的数组
+    }
+    delete[] laplacian; // 释放顶层的指针数组
+}
+
+my_image_comp* ImageRestore(my_image_comp* image_upsample, my_image_comp* image_laplacian, ImageParam* imageParam) {
+    static int count_flag = 1;
+    count_flag++;
+
+    my_image_comp* output = new my_image_comp[3];
+    for (int n = 0; n < imageParam->num_comp; n++) {
+        output[n].init(image_laplacian[n].height, image_laplacian[n].width, 0);
+    }
+    for (int n = 0; n < imageParam->num_comp; n++) {
+        for (int r = 0; r < image_laplacian[n].height; r++) {
+            for (int c = 0; c < image_laplacian[n].width; c++)
+            {
+                //printf("out width:%d", out[i][n].width);
+                //while(1);
+                float* a = image_upsample[n].buf + (r)*image_upsample[n].stride + (c);
+                float* b = image_laplacian[n].buf + r * image_laplacian[n].stride + c;
+                float* add = output[n].buf + r * output[n].stride + c;
+                *add = ((*b - 128) + *a);
+                // if (count_flag == imageParam->D) { 
+                CLAMP_TO_BYTE(*add);
+                // }
+            }
+
+        }
+    }
+    if (count_flag == imageParam->D) {
+        printf("round\r\n");
+
+    }
+    return output;
+
+}
+
+void Image_copy_no_offset(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam) {
+    static int height_offset = 0;
+    for (int n = 0; n < 3; n++) {
+        for (int r = 0; r < (*input_comps)[n].height; r++) {
+            for (int c = 0; c < (*input_comps)[n].width; c++)
+            {
+                float* a = (*input_comps)[n].buf + (r) * (*input_comps)[n].stride + (c);
+                float* output = (*output_comps)[n].buf + (r) * (*output_comps)[n].stride + c;
+                *output = *a;
+            }
+        }
+    }
+
+
 }

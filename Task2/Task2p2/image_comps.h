@@ -113,4 +113,5 @@ void Image_copy(my_image_comp** input_comps, my_image_comp** output_comps, Image
 void Image_upsample(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam);
 void Laplacian_difference(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam);
 void Image_comps_init(my_image_comp** temp_comps, ImageParam* imageParam, int height, int width, int extention);
+void Image_copy_no_offset(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam);
 #endif

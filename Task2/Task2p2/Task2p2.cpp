@@ -78,6 +78,9 @@ int main(int argc, char* argv[]) {
 
             my_image_comp* temp_comps_4 = new  my_image_comp[imageParam.num_comp];
             Image_comps_init(&temp_comps_4, &imageParam, imageParam.height, imageParam.width, (imageParam.sincWidth - 1) / 2);
+
+            my_image_comp* temp_comps_5 = new  my_image_comp[imageParam.num_comp];
+            Image_comps_init(&temp_comps_5, &imageParam, imageParam.height, imageParam.width, (imageParam.sincWidth - 1) / 2);
             overlaid = new  my_image_comp[imageParam.num_comp];
 
             tempheight = imageParam.initheight;//extension coloum
@@ -90,7 +93,7 @@ int main(int argc, char* argv[]) {
             Image_LPF(&input_comps, &temp_comps_inital, &sinc, &imageParam);//lpf 10
             Image_DownSample(&temp_comps_inital, &temp_comps, &imageParam);// 5
             Image_upsample(&temp_comps, &temp_comps_3, &imageParam);//10
-            Laplacian_difference(&temp_comps_inital, &temp_comps_3, &imageParam);
+            Laplacian_difference(&input_comps, &temp_comps_3, &imageParam);
             Image_copy(&temp_comps_3, &overlaid, &imageParam);
             //Image_DownSample(&temp_comps, &output_comps, &imageParam);//5
 
@@ -98,9 +101,11 @@ int main(int argc, char* argv[]) {
            
             for (int i = 0; i < imageParam.D - 1; i++) {
                 Image_LPF(&nextinput, &temp_comps_4, &sinc, &imageParam);//10
+                Image_comps_init(&temp_comps_5, &imageParam, nextinput[0].height, nextinput[0].width, (imageParam.sincWidth - 1) / 2);
+                Image_copy_no_offset(&nextinput,&temp_comps_5,&imageParam);
                 Image_DownSample(&temp_comps_4, &output_comps, &imageParam);//5
                 Image_upsample(&output_comps, &temp_diffback, &imageParam);//10
-                Laplacian_difference(&temp_comps_4, &temp_diffback, &imageParam);//10
+                Laplacian_difference(&temp_comps_5, &temp_diffback, &imageParam);//10
                 Image_copy(&temp_diffback, &overlaid, &imageParam);
                 nextinput = output_comps;
                /* Image_copy(&output_comps, &overlaid, &imageParam);*/
