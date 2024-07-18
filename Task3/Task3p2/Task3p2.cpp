@@ -61,8 +61,8 @@ int main(int argc, char* argv[]) {
         case INVERT_LAPLACIAN: {
             int D = Image_location(&input_comps,imageParam.height,imageParam.width,&imageParam);
             imageParam.D = D;
-            lapalacin = allocate_laplacian(D, imageParam.origion_image_height, imageParam.width);
-            Decompoment(input_comps, lapalacin,D);
+            lapalacin = allocate_laplacian(D, imageParam.origion_image_height, imageParam.width, &imageParam);
+            Decompoment(input_comps, lapalacin,D, &imageParam);
             my_image_comp* input = lapalacin[D];
             my_image_comp* temp_image_1 = new  my_image_comp[imageParam.num_comp];
             for (int i = D; i >=1; i--) {         

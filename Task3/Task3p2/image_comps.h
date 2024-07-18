@@ -116,7 +116,7 @@ void Image_upsample(my_image_comp** input_comps, my_image_comp** output_comps, I
 void Laplacian_difference(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam);
 void Image_comps_init(my_image_comp** temp_comps, ImageParam* imageParam, int height, int width, int extention);
 int Image_location(my_image_comp** temp_comps, int Height, int width, ImageParam* imageParam);
-void Decompoment(my_image_comp* in, my_image_comp** out, int D);
-my_image_comp** allocate_laplacian(int D, int height, int width);
+void Decompoment(my_image_comp* in, my_image_comp** out, int D, ImageParam* imageParam);
+my_image_comp** allocate_laplacian(int D, int height, int width, ImageParam* imageParam);
 my_image_comp* ImageRestore(my_image_comp* image_upsample, my_image_comp* image_laplacian, ImageParam* imageParam);
 #endif

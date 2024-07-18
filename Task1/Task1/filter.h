@@ -30,6 +30,7 @@ public:
         return (x == 0) ? 1.0 : sin(PI * x) / (PI * x);
     }
     void hannwindow(double* hann) {
+        if (this->length == 0) { hann[0] = 1; return; }
         for (int i = 0; i < (this->length * 2 + 1); i++) {
             hann[i] = 0.5 * (1 - cos(2 * PI * i / (2 * this->length)));
         }
@@ -43,7 +44,9 @@ public:
         }
         hannwindow(this->hann);
         for (int i = 0; i < (this->length * 2 + 1); i++) {
-            sinc_buffer[i] *= this->hann[i];
+            double temp = sinc_buffer[i];
+            printf("sic:%f,hann:%f\r\n", sinc_buffer[i], temp * this->hann[i]);
+            sinc_buffer[i] = temp*this->hann[i];
         }
     }
     void horizontal_filter(my_image_comp* in, my_image_comp* out, double* inputfilter, int width, int G_MF_flag) {

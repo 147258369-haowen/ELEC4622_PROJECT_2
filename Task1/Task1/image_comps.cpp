@@ -427,7 +427,7 @@ void CheckInput(int argc, char* argv[], float* sigma, int* filterChooseFlag, Ima
         fprintf(stderr, "The D value is not correct\n");
         exit(-1);
     }
-    else if (H <= 0) {
+    else if (H < 0) {
         fprintf(stderr, "The H value is not correct\n");
         exit(-1);
     }
@@ -932,7 +932,7 @@ void Image_DownSample(my_image_comp** input_comps, my_image_comp** output_comps,
         (*output_comps)[n].perform_boundary_extension();
     }
 
-    for (int n = 0; n < 3; n++) {
+    for (int n = 0; n < imageParam->num_comp; n++) {
         for (int r = 0; r < (*output_comps)[n].height; r++) {
             for (int c = 0; c < (*output_comps)[n].width; c++)
             {
@@ -949,7 +949,7 @@ void Image_DownSample(my_image_comp** input_comps, my_image_comp** output_comps,
 
 void Image_copy(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam) {
     static int height_offset = 0;
-    for (int n = 0; n < 3; n++) {
+    for (int n = 0; n < imageParam->num_comp; n++) {
         for (int r = 0; r < (*input_comps)[n].height; r++) {
             for (int c = 0; c < (*input_comps)[n].width; c++)
             {

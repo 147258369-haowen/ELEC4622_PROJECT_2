@@ -938,7 +938,7 @@ void Image_DownSample(my_image_comp** input_comps, my_image_comp** output_comps,
         (*output_comps)[n].perform_boundary_extension();
     }
 
-    for (int n = 0; n < 3; n++) {
+    for (int n = 0; n < imageParam->num_comp; n++) {
         for (int r = 0; r < (*output_comps)[n].height; r++) {
             for (int c = 0; c < (*output_comps)[n].width; c++)
             {
@@ -955,7 +955,7 @@ void Image_DownSample(my_image_comp** input_comps, my_image_comp** output_comps,
 
 void Image_copy(my_image_comp** input_comps, my_image_comp** output_comps, ImageParam* imageParam) {
     static int height_offset = 0;
-    for (int n = 0; n < 3; n++) {
+    for (int n = 0; n < imageParam->num_comp; n++) {
         for (int r = 0; r < (*input_comps)[n].height; r++) {
             for (int c = 0; c < (*input_comps)[n].width; c++)
             {
@@ -1007,7 +1007,7 @@ void Image_upsample(my_image_comp** input_comps, my_image_comp** output_comps, I
         (*output_comps)[n].perform_boundary_extension();
     }
 
-    for (int n = 0; n < 3; n++) {
+    for (int n = 0; n < imageParam->num_comp; n++) {
         for (int r = 0; r < new_height; r++) {
             for (int c = 0; c < new_width; c++) {
                 // Find the coordinates of the four surrounding pixels
@@ -1050,7 +1050,7 @@ void Laplacian_difference(my_image_comp** input_comps, my_image_comp** output_co
     int new_height = (imageParam->height);
     int new_width = (imageParam->width);
 
-    for (int n = 0; n < 3; n++) {
+    for (int n = 0; n < imageParam->num_comp; n++) {
         for (int r = 0; r < (*output_comps)[n].height; r++) {
             for (int c = 0; c < (*output_comps)[n].width; c++)
             {
@@ -1087,10 +1087,10 @@ int Image_location(my_image_comp** temp_comps,int Height, int width, ImageParam*
     return D;
 
 }
-void Decompoment(my_image_comp* in, my_image_comp** out,int D) {
+void Decompoment(my_image_comp* in, my_image_comp** out,int D, ImageParam* imageParam) {
     static int offset = 0;
     for (int i = 0; i < D+1; ++i) {
-        for (int n = 0; n < 3; n++) {
+        for (int n = 0; n < imageParam->num_comp; n++) {
             for (int r = 0; r < out[i][n].height; r++) {
                 for (int c = 0; c < out[i][n].width; c++)
                 {
@@ -1106,17 +1106,16 @@ void Decompoment(my_image_comp* in, my_image_comp** out,int D) {
     }
 
 }
-my_image_comp** allocate_laplacian(int D, int height, int width) {//height 1024
+my_image_comp** allocate_laplacian(int D, int height, int width, ImageParam* imageParam) {//height 1024
     my_image_comp** laplacian = new my_image_comp * [D+1];
     int tempheight = height;//extension coloum
     int tempwidth = width;
     printf("tempheight:%d\r\n", tempheight);
     for (int i = 0; i < (D+1); ++i) {
-        laplacian[i] = new my_image_comp[3];
-        for (int j = 0; j < 3; j++) {
+        laplacian[i] = new my_image_comp[imageParam->num_comp];
+        for (int j = 0; j < imageParam->num_comp; j++) {
             laplacian[i][j].init(tempheight, tempwidth, 4);
             laplacian[i][j].perform_boundary_extension();
-        
         }
         tempheight = tempheight / 2;
         tempwidth = tempwidth / 2; 
@@ -1130,7 +1129,7 @@ my_image_comp* ImageRestore(my_image_comp* image_upsample, my_image_comp* image_
     static int count_flag = 1;
     count_flag++;
 
-    my_image_comp* output = new my_image_comp[3];
+    my_image_comp* output = new my_image_comp[imageParam->num_comp];
     for (int n = 0; n < imageParam->num_comp; n++) {
         output[n].init(image_laplacian[n].height, image_laplacian[n].width, 0);
     }

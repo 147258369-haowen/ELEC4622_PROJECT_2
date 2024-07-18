@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
                 overlaid[n].perform_boundary_extension();
             
             Image_LPF(&input_comps, &temp_comps, &sinc, &imageParam);
-            Image_copy(&temp_comps, &overlaid, &imageParam);
+            Image_copy(&input_comps, &overlaid, &imageParam);
             Image_DownSample(&temp_comps, &output_comps, &imageParam);
             nextinput = output_comps;
             Image_copy(&output_comps, &overlaid, &imageParam);

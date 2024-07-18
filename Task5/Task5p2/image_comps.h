@@ -92,6 +92,11 @@ struct my_image_comp {
                     *output = *input;
                 }
             }
+            //for (int r = 0; r < left->height; r++) {
+            //    float* output = this->buf + r * this->stride + (right->width / 2);
+            //    *output = 0;
+            //}
+            
             //right stich
             for (int r = 0; r < left->height; r++) {
                 for (int c = (right->width / 2); c < right->width; c++)
@@ -103,6 +108,7 @@ struct my_image_comp {
                     *output = *input;
                 }
             }
+
 
     
     

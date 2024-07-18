@@ -61,16 +61,16 @@ int main(int argc, char* argv[]) {
             int D = Image_location(&overlaid, imageParam.initheight, store_out_image_1[0].width, &imageParam);
             imageParam.D = D;
             if (change_picture) {//first time enter
-                lapalacin = allocate_laplacian(D, imageParam.origion_image_height, store_out_image_1[0].width);
-                lapalacin2 = allocate_laplacian(D, imageParam.origion_image_height, store_out_image_1[0].width);
+                lapalacin = allocate_laplacian(D, imageParam.origion_image_height, store_out_image_1[0].width, &imageParam);
+                lapalacin2 = allocate_laplacian(D, imageParam.origion_image_height, store_out_image_1[0].width, &imageParam);
             }
-            if (change_picture) Decompoment(store_out_image_1, lapalacin, D);//first time enter
-            else Decompoment(store_out_image_2, lapalacin2, D);
+            if (change_picture) Decompoment(store_out_image_1, lapalacin, D, &imageParam);//first time enter
+            else Decompoment(store_out_image_2, lapalacin2, D, &imageParam);
             
             if (!change_picture) {
                 int clear_flag = 1;
                 Image_comps_init(&output_comps, &imageParam, store_out_image_1[0].height, store_out_image_1[0].width, 0);
-                lapalacin3 = allocate_laplacian(D, imageParam.origion_image_height, store_out_image_1[0].width);
+                lapalacin3 = allocate_laplacian(D, imageParam.origion_image_height, store_out_image_1[0].width, &imageParam);
                 for (int i = 0; i < D + 1; ++i) {
                     for (int n = 0; n < imageParam.num_comp; n++) {
                         lapalacin3[i][n].ImageStich(lapalacin[i] + n, lapalacin2[i] + n, &imageParam);
@@ -106,8 +106,8 @@ int main(int argc, char* argv[]) {
         case INVERT_LAPLACIAN: {
             int D = Image_location(&overlaid, output_comps[0].height, output_comps[0].width, &imageParam);
             imageParam.D = D;
-            lapalacin = allocate_laplacian(D, imageParam.origion_image_height, output_comps[0].width);
-            Decompoment(output_comps, lapalacin, D);
+            lapalacin = allocate_laplacian(D, imageParam.origion_image_height, output_comps[0].width, &imageParam);
+            Decompoment(output_comps, lapalacin, D, &imageParam);
             my_image_comp* input = lapalacin[D];
             my_image_comp* temp_image_1 = new  my_image_comp[imageParam.num_comp];
             for (int i = D; i >= 1; i--) {
